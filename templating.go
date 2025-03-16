@@ -9,9 +9,16 @@ import (
 )
 
 func ParseTemplates(templateDirectory string) (*template.Template, error) {
-	var parsedTemplates = template.Must(template.New("/").Parse(""))
+	dirFS := os.DirFS(templateDirectory)
 
-	err := filepath.WalkDir(templateDirectory, func(path string, d fs.DirEntry, err error) error {
+	return ParseFS(dirFS, ".")
+}
+
+// ParseFS was written to support [embed.FS]
+func ParseFS(templateFS fs.FS, root string) (*template.Template, error) {
+	var parsedTemplates = template.Must(template.New("").Parse(""))
+
+	err := fs.WalkDir(templateFS, root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			_ = fmt.Errorf("failed to parse path %s: %v", path, err)
 		}
@@ -20,12 +27,23 @@ func ParseTemplates(templateDirectory string) (*template.Template, error) {
 			return nil
 		}
 
-		templateContent, err := os.ReadFile(path)
+		file, err := templateFS.Open(path)
+		if err != nil {
+			return fmt.Errorf("failed to open file: %v", err)
+		}
+
+		fileStat, err := file.Stat()
+		if err != nil {
+			return fmt.Errorf("failed to get file size for reading: %v", err)
+		}
+
+		templateContent := make([]byte, fileStat.Size())
+		_, err = file.Read(templateContent)
 		if err != nil {
 			return fmt.Errorf("failed to read file content: %v", err)
 		}
 
-		relPath, err := filepath.Rel(templateDirectory, path)
+		relPath, err := filepath.Rel(root, path)
 		if err != nil {
 			return fmt.Errorf("failed to get relative path: %v", err)
 		}

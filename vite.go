@@ -10,9 +10,9 @@ import (
 
 type ViteIntegrationConfigs struct {
 	isDevEnvironment bool
-	viteProxyAddress string
-	viteBuildPath    string
-	pathPrefix       string
+	ViteProxyAddress string
+	ViteBuildPath    string
+	PathPrefix       string
 }
 
 func (configs ViteIntegrationConfigs) SetIsDevEnvironment(yes bool) ViteIntegrationConfigs {
@@ -23,27 +23,27 @@ func (configs ViteIntegrationConfigs) SetIsDevEnvironment(yes bool) ViteIntegrat
 func NewViteIntegrationConfigs(vitebuildPath string) ViteIntegrationConfigs {
 	return ViteIntegrationConfigs{
 		isDevEnvironment: false,
-		viteProxyAddress: "http://localhost:5173/",
-		viteBuildPath:    vitebuildPath,
-		pathPrefix:       "/",
+		ViteProxyAddress: "http://localhost:5173/",
+		ViteBuildPath:    vitebuildPath,
+		PathPrefix:       "/",
 	}
 }
 
 func ApplyViteIntegration(e *echo.Echo, configs ViteIntegrationConfigs) error {
 	if configs.isDevEnvironment {
-		e.Logger.Info(configs.viteProxyAddress)
+		e.Logger.Info(configs.ViteProxyAddress)
 		err := setupDevProxy(e, configs)
 		if err != nil {
 			return err
 		}
 	}
 
-	e.Static(configs.pathPrefix, configs.viteBuildPath)
+	e.Static(configs.PathPrefix, configs.ViteBuildPath)
 	return nil
 }
 
 func setupDevProxy(e *echo.Echo, configs ViteIntegrationConfigs) error {
-	url, err := url.Parse(configs.viteProxyAddress)
+	url, err := url.Parse(configs.ViteProxyAddress)
 	if err != nil {
 		return fmt.Errorf("failed to parse Vite proxy address: %v", err)
 	}

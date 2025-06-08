@@ -38,7 +38,11 @@ func ApplyViteIntegration(e *echo.Echo, configs ViteIntegrationConfigs) error {
 		}
 	}
 
-	e.Static(configs.PathPrefix, configs.ViteBuildPath)
+	e.Use(middleware.StaticWithConfig(middleware.StaticConfig{
+		Root:   configs.ViteBuildPath,
+		HTML5:  true,
+		Index:  "index.html",
+		Browse: true}))
 	return nil
 }
 

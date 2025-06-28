@@ -1,10 +1,12 @@
 package webtools_test
 
 import (
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"testing"
+	"time"
 
 	"github.com/ducthuy-ng/webtools"
 	"github.com/labstack/echo/v4"
@@ -173,4 +175,46 @@ func TestRenderProdRoute(t *testing.T) {
 	assertion := playwright.NewPlaywrightAssertions()
 	err = assertion.Locator(heading).ToHaveCount(1)
 	assert.Nil(t, err)
+}
+
+func TestSkipperFileSystem(t *testing.T) {
+	e := echo.New()
+	err := webtools.ApplyViteIntegration(
+		e,
+		webtools.NewViteIntegrationConfigs("./ui-test/dist").SetIsDevEnvironment(false).SetSkipper(
+			func(c echo.Context) bool {
+				return c.Request().URL.Path == "/skip"
+			},
+		))
+	assert.Nil(t, err)
+
+	e.GET("/skip", func(c echo.Context) error {
+		return c.String(http.StatusOK, "This route is skipped by Vite middleware")
+	})
+
+	/* Build vite */
+	buildCmd := exec.Command("bun", "run", "build")
+	buildCmd.Dir = "./ui-test/"
+	buildCmd.Run()
+
+	go func() {
+		e.Start(":3000")
+	}()
+
+	defer func() {
+		e.Close()
+	}()
+
+	response, err := http.Get("http://localhost:3000/skip")
+	if err != nil {
+		t.Fatalf("failed to send request: %v", err)
+	}
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+
+	content, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatalf("failed to read response body: %v", err)
+	}
+	defer response.Body.Close()
+	assert.Equal(t, "This route is skipped by Vite middleware", string(content))
 }
